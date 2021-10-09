@@ -1,8 +1,8 @@
 clc
 clear
 warning('off');
-for i=1:19 %7 non-memory
-    hist_coeff_mem_nonmem(i,'non-mem',...,
+for i=1:116 %7 non-memory
+    hist_coeff_mem_nonmem(i,'congru',...,
         'prefix','0315',...,
         'tsbin_size',600,...,
         'postspike',true,...,
@@ -12,6 +12,7 @@ for i=1:19 %7 non-memory
         'laser','on',...,
         'assembly',true)
 end
+
 function hist_coeff_mem_nonmem(sess,mtype,opt)
 arguments
     sess (1,1) double {mustBeInteger,mustBePositive,mustBeNonempty} =2
@@ -27,7 +28,11 @@ arguments
     opt.assembly (1,1) logical = true
 end
 % sig=load_sig_pair(opt);
-load('sig.mat','sig')
+if ispc
+    load('sig.mat','sig'); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% path
+else
+    load(fullfile('/home','hem','datashare','sig.mat'),'sig');  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% path
+end
 switch mtype
     case 'congru'
         typesel=sig.sess==sess & (all(ismember(sig.mem_type,1:2),2) | all(ismember(sig.mem_type,3:4),2));
@@ -50,6 +55,7 @@ postspk=cell(0);
 avail=[];
 sidx=1;
 sess_suids=sig.suid(idces,:);
+suid=[];suid_sess=[];
 for i=reshape(idces,1,[])    
     if nnz(sess_suids(:,2)==sig.suid(i,2))<=1 || nnz(sess_suids(:,2)==sig.suid(i,2))>5
         continue
@@ -90,10 +96,15 @@ postspk(~all(avail,2))=[];
 suid(~all(avail,2),:)=[];
 suid_sess(~all(avail,2),:)=[];
 if ~isempty(postspk)
-    
-    save(fullfile('F:','neupix','STP','coactivate','0704-trial',sprintf('%s_stp_%s_%d_%d.mat',...
+    if ispc
+        save(fullfile('F:','neupix','STP','coactivate','0704-trial',sprintf('%s_stp_%s_%d_%d.mat',...
         opt.prefix,mtype,sess,opt.tsbin_size)),...
         'postspk','suid','suid_sess','mtype');
+    else
+        save(fullfile('/home','hem','datashare','0620-time',sprintf('%s_stp_%s_%d_%d.mat',...
+            opt.prefix,mtype,sess,opt.tsbin_size)),...
+            'postspk','suid','suid_sess','mtype');
+    end
 end
 end
 
@@ -197,13 +208,17 @@ end
 function [avail,out]=pre_process(id,spkTS,spkId,trials,~)
 timlim=[-4,14];
 sps=30000;
-addpath('D:/code/fieldtrip-20200320')
+if ispc
+    addpath(fullfile('D:','code','fieldtrip-20200320'))
+else
+    addpath('fieldtrip-20200320')
+end
 ft_defaults
 FT_SPIKE=struct();
 FT_SPIKE.label=strtrim(cellstr(num2str(id)));
 FT_SPIKE.timestamp{1}=cell(1,numel(id));
 FT_SPIKE.timestamp{1}=spkTS(spkId==id)';
-sps=30000;
+
 cfg=struct();
 cfg.trl=[trials(:,1)+timlim(1)*sps,trials(:,1)+timlim(2)*sps,zeros(size(trials,1),1)+timlim(1)*sps,trials];
 cfg.trlunit='timestamps';
@@ -221,8 +236,11 @@ function [spkID,spkTS,trials,SU_id,folder]=getSPKID_TS(fidx)
 arguments
     fidx (1,1) double {mustBeInteger,mustBeGreaterThanOrEqual(fidx,1)}
 end
-
-homedir=fullfile('F:','neupix','SPKINFO'); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if ispc
+    homedir=fullfile('F:','neupix','SPKINFO'); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+else
+    homedir=fullfile('/home','zx','neupix','SPKINFO'); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+end
 folder=replace(sessid2path(fidx),'\',filesep());
 trials=h5read(fullfile(homedir,folder,'FR_All_1000.hdf5'),'/Trials');
 SU_id=h5read(fullfile(homedir,folder,'FR_All_1000.hdf5'),'/SU_id');
@@ -253,7 +271,11 @@ arguments
     opt.type (1,:) char {mustBeMember(opt.type,{'neupix','AIOPTO'})}='neupix'
 end
 persistent map
-homedir=fullfile('E:','hem','bzdata');  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if ispc
+    homedir=fullfile('E:','hem','bzdata');  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% path
+else
+    homedir=fullfile('/home','hem','datashare');  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% path
+end
 if isempty(map)
     
     if strcmp(opt.type,'neupix')
